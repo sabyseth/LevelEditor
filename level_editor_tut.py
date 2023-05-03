@@ -29,6 +29,10 @@ scroll_down = False
 scroll = 0
 scroll_up_down = 0
 scroll_speed = 1
+x = 0
+y = 0
+scroll_x = 0
+scroll_y = 0
 
 # store tiles in a list
 img_list = []
@@ -65,16 +69,27 @@ def draw_bg():
     screen.fill(BLACK)
 
 
-# draw grid
-def draw_grid():
+
+'''def draw_grid():
     # vertical lines
     for c in range(MAX_COLS + 1):
-        pygame.draw.line(screen, GRAY, (c * TILE_SIZE - scroll, scroll_up_down),
-                         (c * TILE_SIZE - scroll, SCREEN_HEIGHT))
+        pygame.draw.line(screen, GRAY, (c * TILE_SIZE - scroll , scroll_up_down),
+                         (c * TILE_SIZE - scroll, SCREEN_HEIGHT - scroll_up_down))
     # horizontal lines
     for c in range(ROWS + 1):
         pygame.draw.line(screen, GRAY, (0, c * TILE_SIZE + scroll_up_down),
                          (SCREEN_WIDTH, c * TILE_SIZE + scroll_up_down))
+'''
+# draw grid
+def draw_grid(scroll_x, scroll_y):
+    # vertical lines
+    for c in range(MAX_COLS + 1):
+        pygame.draw.line(screen, GRAY, (c * TILE_SIZE - scroll_x, 0),
+                         (c * TILE_SIZE - scroll_x, SCREEN_HEIGHT))
+    # horizontal lines
+    for c in range(ROWS + 1):
+        pygame.draw.line(screen, GRAY, (0, c * TILE_SIZE + scroll_y),
+                         (SCREEN_WIDTH, c * TILE_SIZE + scroll_y))
 
 
 # function for drawing the world tiles
@@ -82,7 +97,7 @@ def draw_world():
     for y, row in enumerate(world_data):
         for x, tile in enumerate(row):
             if tile >= 0:
-                screen.blit(img_list[tile], (x * TILE_SIZE - scroll, y * TILE_SIZE + scroll_up_down))
+                screen.blit(img_list[tile], (x * TILE_SIZE - scroll_x, y * TILE_SIZE + scroll_y))
 
 
 
@@ -104,10 +119,11 @@ while run:
     clock.tick(FPS)
 
     draw_bg()
-    draw_grid()
+    draw_grid(scroll_x, scroll_y)
     draw_world()
 
     draw_text(f'Level: {level}', font, WHITE, 1, 1)
+    draw_text(f'x{x}, y{y}', font, WHITE, 1, 30)
     #draw_text('Press W or S to change level', font, WHITE, 700, 500)
 
     # draw tile panel and tiles
@@ -124,23 +140,23 @@ while run:
 
     # scroll the map
     if scroll_left == True:
-        scroll -= 5 * scroll_speed
-        MAX_COLS += 1
+        scroll_x -= 5 * scroll_speed
+
     if scroll_right == True:
-        scroll += 5 * scroll_speed
+        scroll_x += 5 * scroll_speed
         MAX_COLS += 1
     if scroll_up == True:
-        scroll_up_down += 5 * scroll_speed
-        ROWS += 1
+        scroll_y += 5 * scroll_speed
+
     if scroll_down == True:
-        scroll_up_down -= 5 * scroll_speed
+        scroll_y -= 5 * scroll_speed
         ROWS += 1
 
     # add new tiles to the screen
     # get mouse position
     pos = pygame.mouse.get_pos()
-    x = (pos[0] + scroll) // TILE_SIZE
-    y = (pos[1] - scroll_up_down) // TILE_SIZE
+    x = (pos[0] + scroll_x) // TILE_SIZE
+    y = (pos[1] - scroll_y) // TILE_SIZE
 
     # check that the coordinates are within the tile area
     if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:

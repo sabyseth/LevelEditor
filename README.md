@@ -1,5 +1,8 @@
 # LevelEditor
+
 Commands CTRL + S To save
 
-q to increase level
-a decrees the level 
+Q to increase level
+A decrees the level 
+
+L To load 

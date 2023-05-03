@@ -1,44 +1,40 @@
 import pygame
-
-# Initialize Pygame
 pygame.init()
 
-# Set up the screen
-SCREEN_WIDTH = 640
-SCREEN_HEIGHT = 480
-SIDE_MARGIN = 100
-screen = pygame.display.set_mode((SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT))
+# Define the screen size
+screen_width = 640
+screen_height = 480
+screen = pygame.display.set_mode((screen_width, screen_height))
 
-# Define colors
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
+# Load the background image and get its size
+background_img = pygame.image.load('sky_cloud.png')
+background_width = background_img.get_width()
+background_height = background_img.get_height()
 
-# Set up font
-font = pygame.font.Font(None, 36)
+# Set the initial position of the background image
+background_x = 0
 
-# Draw side margin
-pygame.draw.rect(screen, GREEN, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
+# Set the speed at which the background scrolls
+scroll_speed = 1
 
-# Render text
-text = font.render("This text is over the side margin", True, WHITE)
-
-# Get text position
-text_rect = text.get_rect()
-text_rect.centerx = screen.get_width() - SIDE_MARGIN // 2
-text_rect.centery = screen.get_height() // 2
-
-# Draw text on screen
-screen.blit(text, text_rect)
-
-# Update the screen
-pygame.display.update()
-
-# Main game loop
-running = True
-while running:
+# Start the game loop
+while True:
+    # Handle events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            pygame.quit()
+            sys.exit()
 
-# Quit Pygame
-pygame.quit()
+    # Scroll the background
+    background_x -= scroll_speed
+
+    # Wrap the background image if it goes off the screen
+    if background_x <= -background_width:
+        background_x = 0
+
+    # Draw the background image twice, side by side
+    screen.blit(background_img, (background_x, 0))
+    screen.blit(background_img, (background_x + background_width, 0))
+
+    # Update the display
+    pygame.display.update()
