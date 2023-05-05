@@ -17,7 +17,7 @@ pygame.display.set_caption('Level Editor')
 
 # define game variables
 ROWS = 16
-MAX_COLS = 17
+MAX_COLS = 16
 TILE_SIZE = SCREEN_HEIGHT // ROWS
 TILE_TYPES = 11
 level = 0
@@ -31,8 +31,8 @@ scroll_up_down = 0
 scroll_speed = 1
 x = 0
 y = 0
-scroll_x = 0
-scroll_y = 0
+scroll_x = 1
+scroll_y = 1
 
 # store tiles in a list
 img_list = []
@@ -68,20 +68,9 @@ def draw_text(text, font, text_col, x, y, x_offset=0):
 def draw_bg():
     screen.fill(BLACK)
 
-
-
-'''def draw_grid():
-    # vertical lines
-    for c in range(MAX_COLS + 1):
-        pygame.draw.line(screen, GRAY, (c * TILE_SIZE - scroll , scroll_up_down),
-                         (c * TILE_SIZE - scroll, SCREEN_HEIGHT - scroll_up_down))
-    # horizontal lines
-    for c in range(ROWS + 1):
-        pygame.draw.line(screen, GRAY, (0, c * TILE_SIZE + scroll_up_down),
-                         (SCREEN_WIDTH, c * TILE_SIZE + scroll_up_down))
-'''
-# draw grid
+'''# draw grid
 def draw_grid(scroll_x, scroll_y):
+
     # vertical lines
     for c in range(MAX_COLS + 1):
         pygame.draw.line(screen, GRAY, (c * TILE_SIZE - scroll_x, 0),
@@ -90,6 +79,27 @@ def draw_grid(scroll_x, scroll_y):
     for c in range(ROWS + 1):
         pygame.draw.line(screen, GRAY, (0, c * TILE_SIZE + scroll_y),
                          (SCREEN_WIDTH, c * TILE_SIZE + scroll_y))
+'''
+def draw_grid(scroll_x, scroll_y):
+    # calculate the number of rows and columns needed to fill the screen
+    max_cols = (SCREEN_WIDTH // TILE_SIZE) + 2
+    max_rows = (SCREEN_HEIGHT // TILE_SIZE) + 2
+
+    # calculate the position of the top-left corner of the screen in tile coordinates
+    start_x = scroll_x // TILE_SIZE
+    start_y = scroll_y // TILE_SIZE
+
+    # calculate the position of the bottom-right corner of the screen in tile coordinates
+    end_x = start_x + max_cols
+    end_y = start_y + max_rows
+
+    # draw vertical lines
+    for c in range(start_x, end_x + 1):
+        pygame.draw.line(screen, GRAY, ((c * TILE_SIZE) - scroll_x, 0), ((c * TILE_SIZE) - scroll_x, SCREEN_HEIGHT))
+
+    # draw horizontal lines
+    for c in range(start_y, end_y + 1):
+        pygame.draw.line(screen, GRAY, (0, (c * TILE_SIZE) - scroll_y), (SCREEN_WIDTH, (c * TILE_SIZE) - scroll_y))
 
 
 # function for drawing the world tiles
@@ -97,7 +107,7 @@ def draw_world():
     for y, row in enumerate(world_data):
         for x, tile in enumerate(row):
             if tile >= 0:
-                screen.blit(img_list[tile], (x * TILE_SIZE - scroll_x, y * TILE_SIZE + scroll_y))
+                screen.blit(img_list[tile], (x * TILE_SIZE - scroll_x, y * TILE_SIZE - scroll_y))
 
 
 
@@ -144,13 +154,13 @@ while run:
 
     if scroll_right == True:
         scroll_x += 5 * scroll_speed
-        MAX_COLS += 1
+
     if scroll_up == True:
-        scroll_y += 5 * scroll_speed
+        scroll_y -= 5 * scroll_speed
 
     if scroll_down == True:
-        scroll_y -= 5 * scroll_speed
-        ROWS += 1
+        scroll_y += 5 * scroll_speed
+
 
     # add new tiles to the screen
     # get mouse position
