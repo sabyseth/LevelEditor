@@ -39,14 +39,6 @@ right = 1
 up = 1
 down =1
 
-# define edge scroll thresholds
-left_scroll_threshold = TILE_SIZE * 2
-top_scroll_threshold = TILE_SIZE * 2
-
-# define edge tile data sizes
-left_tile_data_size = 3
-top_tile_data_size = 3
-
 # store tiles in a list
 img_list = []
 for x in range(TILE_TYPES):
@@ -89,8 +81,8 @@ def draw_bg():
 
 # draw grid
 def draw_grid(scroll_x, scroll_y):
-    # vertical lines
-    for c in range(left, SCREEN_WIDTH // TILE_SIZE + right):
+    # vertical lines (including new column)
+    for c in range(left - 1, SCREEN_WIDTH // TILE_SIZE + right):
         pygame.draw.line(screen, GRAY, ((c * TILE_SIZE) - scroll_x, 0), ((c * TILE_SIZE) - scroll_x, SCREEN_HEIGHT))
 
     # horizontal lines
@@ -151,15 +143,16 @@ while run:
 
     # scroll the map
     if scroll_left == True:
-        scroll_x -= 5 * scroll_speed
-        left -= 1
-
+        if scroll_x > 0:
+            scroll_x -= 5 * scroll_speed
+            left -= 1
     if scroll_right == True:
         scroll_x += 5 * scroll_speed
         right += 1
     if scroll_up == True:
-        scroll_y += 5 * scroll_speed
-        up -= 1
+        if scroll_y > 0:
+            scroll_y += 5 * scroll_speed
+            up -= 1
     if scroll_down == True:
         scroll_y -= 5 * scroll_speed
         down += 1
