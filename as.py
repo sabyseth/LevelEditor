@@ -1,227 +1,160 @@
-import pygame
-import button
-import csv
-
-pygame.init()
+import pygame, sys
 
 clock = pygame.time.Clock()
-FPS = 60
 
-# game window
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 740
-SIDE_MARGIN = 300
+from pygame.locals import *
 
-screen = pygame.display.set_mode((SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT))
-pygame.display.set_caption('Level Editor')
+pygame.init()  # initiates pygame
 
-# define game variables
-ROWS = 16
-MAX_COLS = 17
-TILE_SIZE = SCREEN_HEIGHT // ROWS
-TILE_TYPES = 11
-level = 0
-current_tile = 0
-scroll_left = False
-scroll_right = False
-scroll_up = False
-scroll_down = False
-scroll = 0
-scroll_up_down = 0
-scroll_speed = 1
+pygame.display.set_caption('Pygame Platformer')
 
-# store tiles in a list
-img_list = []
-for x in range(TILE_TYPES):
-    img = pygame.image.load(f'img/tile/{x}.png').convert_alpha()
-    img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-    img_list.append(img)
+WINDOW_SIZE = (600, 400)
 
-# define colours
-GREEN = (30, 30, 30)
-WHITE = (255, 255, 255)
-RED = (200, 25, 25)
-BLACK = (0, 0, 0, 255)
-GRAY = (131, 139, 139)
+screen = pygame.display.set_mode(WINDOW_SIZE, 0, 32)  # initiate the window
 
-# define font
-font = pygame.font.SysFont('Roboto', 30)
-
-# create empty tile list
-world_data = []
-for row in range(ROWS):
-    r = [-1] * MAX_COLS
-    world_data.append(r)
+display = pygame.Surface((300, 200))  # used as the surface for rendering, which is scaled
 
 
-# function for outputting text onto the screen
-def draw_text(text, font, text_col, x, y, x_offset=0):
-    img = font.render(text, True, text_col)
-    screen.blit(img, (x + x_offset, y))
+w, h = 16, 16
+moving_right = False
+moving_left = False
+vertical_momentum = 0
+air_timer = 0
+
+true_scroll = [0, 0]
 
 
-# create function for drawing background
-def draw_bg():
-    screen.fill(BLACK)
+def load_map(path):
+    f = open(path + '.txt', 'r')
+    data = f.read()
+    f.close()
+    data = data.split('\n')
+    game_map = []
+    for row in data:
+        game_map.append(list(row))
+    return game_map
 
 
+game_map = load_map('level0_data')
+
+grass_img = pygame.image.load(f'img/tile/0.png')
+grass_img = pygame.transform.scale(grass_img, (w,h))
+
+dirt_img = pygame.image.load(f'img/tile/3.png')
+dirt_img = pygame.transform.scale(dirt_img, (w,h))
+
+player_img = pygame.image.load(f'img/tile/player.png').convert()
+player_img.set_colorkey((255, 255, 255))
+
+player_rect = pygame.Rect(100, 100, 5, 13)
+
+background_objects = [[0.25, [120, 10, 70, 400]], [0.25, [280, 30, 40, 400]], [0.5, [30, 40, 40, 400]],
+                      [0.5, [130, 90, 100, 400]], [0.5, [300, 80, 120, 400]]]
 
 
-    if scroll_left == True:
-        if scroll_x > 0:
-            scroll_x -= 5 * scroll_speed
-    if scroll_right == True:
-        scroll_x += 5 * scroll_speed
-    if scroll_up == True:
-        if scroll_y > 0:
-            scroll_y += 5 * scroll_speed
-    if scroll_down == True:
-        scroll_y -= 5 * scroll_speed
-
-'''    # vertical lines
-    for c in range(left, SCREEN_WIDTH // TILE_SIZE + right):
-        pygame.draw.line(screen, GRAY, ((c * TILE_SIZE) - scroll_x, 0), ((c * TILE_SIZE) - scroll_x, SCREEN_HEIGHT))
-
-    # horizontal lines
-    for c in range(up, SCREEN_HEIGHT // TILE_SIZE + down):
-        pygame.draw.line(screen, GRAY, (0, (c * TILE_SIZE) + scroll_y), (SCREEN_WIDTH, (c * TILE_SIZE) + scroll_y))
-
-# function for drawing the world tiles'''
-
-# draw grid
-def draw_grid():
-    # vertical lines
-    for c in range(MAX_COLS + 1):
-        pygame.draw.line(screen, GRAY, (c * TILE_SIZE - scroll, scroll_up_down),
-                         (c * TILE_SIZE - scroll, SCREEN_HEIGHT))
-    # horizontal lines
-    for c in range(ROWS + 1):
-        pygame.draw.line(screen, GRAY, (0, c * TILE_SIZE + scroll_up_down),
-                         (SCREEN_WIDTH, c * TILE_SIZE + scroll_up_down))
+def collision_test(rect, tiles):
+    hit_list = []
+    for tile in tiles:
+        if rect.colliderect(tile):
+            hit_list.append(tile)
+    return hit_list
 
 
-# function for drawing the world tiles
-def draw_world():
-    for y, row in enumerate(world_data):
-        for x, tile in enumerate(row):
-            if tile >= 0:
-                screen.blit(img_list[tile], (x * TILE_SIZE - scroll, y * TILE_SIZE + scroll_up_down))
+def move(rect, movement, tiles):
+    collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
+    rect.x += movement[0]
+    hit_list = collision_test(rect, tiles)
+    for tile in hit_list:
+        if movement[0] > 0:
+            rect.right = tile.left
+            collision_types['right'] = True
+        elif movement[0] < 0:
+            rect.left = tile.right
+            collision_types['left'] = True
+    rect.y += movement[1]
+    hit_list = collision_test(rect, tiles)
+    for tile in hit_list:
+        if movement[1] > 0:
+            rect.bottom = tile.top
+            collision_types['bottom'] = True
+        elif movement[1] < 0:
+            rect.top = tile.bottom
+            collision_types['top'] = True
+    return rect, collision_types
 
 
+while True:  # game loop
+    display.fill((146, 244, 255))  # clear screen by filling it with blue
 
-# make a button list
-button_list = []
-button_col = 0
-button_row = 0
-for i in range(len(img_list)):
-    tile_button = button.Button(SCREEN_WIDTH + (75 * button_col) + 50, 75 * button_row + 50, img_list[i], 1)
-    button_list.append(tile_button)
-    button_col += 1
-    if button_col == 3:
-        button_row += 1
-        button_col = 0
+    true_scroll[0] += (player_rect.x - true_scroll[0] - 152) / 20
+    true_scroll[1] += (player_rect.y - true_scroll[1] - 106) / 20
+    scroll = true_scroll.copy()
+    scroll[0] = int(scroll[0])
+    scroll[1] = int(scroll[1])
 
-run = True
-while run:
+    pygame.draw.rect(display, (7, 80, 75), pygame.Rect(0, 120, 300, 80))
+    for background_object in background_objects:
+        obj_rect = pygame.Rect(background_object[1][0] - scroll[0] * background_object[0],
+                               background_object[1][1] - scroll[1] * background_object[0], background_object[1][2],
+                               background_object[1][3])
+        if background_object[0] == 0.5:
+            pygame.draw.rect(display, (14, 222, 150), obj_rect)
+        else:
+            pygame.draw.rect(display, (9, 91, 85), obj_rect)
 
-    clock.tick(FPS)
+    tile_rects = []
+    y = 0
+    for layer in game_map:
+        x = 0
+        for tile in layer:
+            if tile == '3':
+                display.blit(dirt_img, (x * 16 - scroll[0], y * 16 - scroll[1]))
+            if tile == '0':
+                display.blit(grass_img, (x * 16 - scroll[0], y * 16 - scroll[1]))
+            if tile != '1':
+                tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
+            x += 1
+        y += 1
 
-    draw_bg()
-    draw_grid()
-    draw_world()
 
-    draw_text(f'Level: {level}', font, WHITE, 1, 1)
-    #draw_text('Press W or S to change level', font, WHITE, 700, 500)
+    player_movement = [0, 0]
+    if moving_right == True:
+        player_movement[0] += 2
+    if moving_left == True:
+        player_movement[0] -= 2
+    player_movement[1] += vertical_momentum
+    vertical_momentum += 0.2
+    if vertical_momentum > 3:
+        vertical_momentum = 3
 
-    # draw tile panel and tiles
-    pygame.draw.rect(screen, GREEN, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
+    player_rect, collisions = move(player_rect, player_movement, tile_rects)
 
-    # choose a tile
-    button_count = 0
-    for button_count, i in enumerate(button_list):
-        if i.draw(screen):
-            current_tile = button_count
+    if collisions['bottom'] == True:
+        air_timer = 0
+        vertical_momentum = 0
+    else:
+        air_timer += 1
 
-    # highlight the selected tile
-    pygame.draw.rect(screen, RED, button_list[current_tile].rect, 3)
+    display.blit(player_img, (player_rect.x - scroll[0], player_rect.y - scroll[1]))
 
-    # scroll the map
-    if scroll_left == True:
-        scroll -= 5 * scroll_speed
-        MAX_COLS += 1
-    if scroll_right == True:
-        scroll += 5 * scroll_speed
-        MAX_COLS += 1
-    if scroll_up == True:
-        scroll_up_down += 5 * scroll_speed
-        ROWS += 1
-    if scroll_down == True:
-        scroll_up_down -= 5 * scroll_speed
-        ROWS += 1
+    for event in pygame.event.get():  # event loop
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == KEYDOWN:
+            if event.key == K_RIGHT:
+                moving_right = True
+            if event.key == K_LEFT:
+                moving_left = True
+            if event.key == K_UP:
+                if air_timer < 6:
+                    vertical_momentum = -5
+        if event.type == KEYUP:
+            if event.key == K_RIGHT:
+                moving_right = False
+            if event.key == K_LEFT:
+                moving_left = False
 
-    # add new tiles to the screen
-    # get mouse position
-    pos = pygame.mouse.get_pos()
-    x = (pos[0] + scroll) // TILE_SIZE
-    y = (pos[1] - scroll_up_down) // TILE_SIZE
-
-    # check that the coordinates are within the tile area
-    if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
-        # update tile value
-        if pygame.mouse.get_pressed()[0] == 1:
-            if world_data[y][x] != current_tile:
-                world_data[y][x] = current_tile
-        if pygame.mouse.get_pressed()[2] == 1:
-            world_data[y][x] = -1
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-        # keyboard presses
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q:
-                level += 1
-            if event.key == pygame.K_a and level > 0:
-                level -= 1
-            if event.key == pygame.K_LEFT:
-                scroll_left = True
-            if event.key == pygame.K_RIGHT:
-                scroll_right = True
-            if event.key == pygame.K_UP:
-                scroll_up = True
-            if event.key == pygame.K_DOWN:
-                scroll_down = True
-            if event.key == pygame.K_RSHIFT:
-                scroll_speed = 5
-            # save and load data
-            if event.key == pygame.K_s and pygame.KMOD_CTRL:
-                # save level data
-                with open(f'level{level}_data.csv', 'w', newline='') as csvfile:
-                    writer = csv.writer(csvfile, delimiter=',')
-                    for row in world_data:
-                        writer.writerow(row)
-            # load in level data
-            if event.key == pygame.K_l:
-                # reset scroll back to the start of the level
-                scroll = 0
-                with open(f'level{level}_data.csv', newline='') as csvfile:
-                    reader = csv.reader(csvfile, delimiter=',')
-                    for x, row in enumerate(reader):
-                        for y, tile in enumerate(row):
-                            world_data[x][y] = int(tile)
-
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT:
-                scroll_left = False
-            if event.key == pygame.K_RIGHT:
-                scroll_right = False
-            if event.key == pygame.K_UP:
-                scroll_up = False
-            if event.key == pygame.K_DOWN:
-                scroll_down = False
-            if event.key == pygame.K_RSHIFT:
-                scroll_speed = 1
-
+    screen.blit(pygame.transform.scale(display, WINDOW_SIZE), (0, 0))
     pygame.display.update()
-
-pygame.quit()
+    clock.tick(60)
